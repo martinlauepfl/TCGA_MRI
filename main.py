@@ -56,6 +56,3 @@ for i in range(num):
 
 plt.show()
 
-
-
-#
