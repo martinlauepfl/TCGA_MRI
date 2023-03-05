@@ -55,4 +55,3 @@ for i in range(num):
     plt.imshow(torch.argmax(pred_mask[i].permute(1,2,0), axis=-1).detach().numpy())
 
 plt.show()
-###
