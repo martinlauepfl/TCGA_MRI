@@ -14,6 +14,13 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 import segmentation_models_pytorch as smp
+import neptune
+
+
+
+epochs = 10
+batchsize = 8
+learningrate = 0.001
 
 model = smp.Unet(
     encoder_name="resnet34",        # choose encoder, e.g. mobilenet_v2 or efficientnet-b7
@@ -22,13 +29,25 @@ model = smp.Unet(
     classes=2,                      # model output channels (number of classes in your dataset)
 )
 
+run = neptune.init_run(
+    project="zijingliu123/TCGA",
+    api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI4YjA0NDIxMy02MTMwLTQwN2QtYTcxNy0wMDA0MWEwOGYwYTUifQ==",
+)  # your credentials
+
+
+run["parameters"] = {
+    "batch_size": batchsize,
+    "learning_rate": learningrate,
+    "num_epochs": epochs
+}
+
 # img,label=next(iter(dl_train))
 # pred=model(img)
 model.to('cuda')
 
 loss_fn=nn.CrossEntropyLoss()
 
-optimizer=torch.optim.Adam(model.parameters(),lr=0.001)
+optimizer=torch.optim.Adam(model.parameters(),lr=learningrate)
 
 from tqdm import tqdm
 
@@ -84,6 +103,20 @@ def fit(epoch, model, trainloader, testloader):
 
     epoch_test_loss = test_running_loss / len(testloader.dataset)
     epoch_test_acc = test_correct / (test_total * 128 * 128)
+
+    # Log metrics to Neptune
+    run["train/loss"].log(round(epoch_loss, 3))
+    run["train/accuracy"].log(round(epoch_acc, 3))
+    run["train/iou"].log(round(np.mean(epoch_iou), 3))
+
+
+    # Log metrics to Neptune
+    run["test/loss"].log(round(epoch_test_loss, 3))
+    run["test/accuracy"].log(round(epoch_test_acc, 3))
+    run["test/iou"].log(round(np.mean(epoch_test_iou), 3))
+
+    # Log epoch number
+    run["epoch"].log(epoch)
 
     print('epoch: ', epoch,
           'loss： ', round(epoch_loss, 3),

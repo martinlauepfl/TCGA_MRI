@@ -15,10 +15,11 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 import segmentation_models_pytorch as smp
 
-from train import fit, model
+
+from train import fit, model, epochs
 from data import dl_train, dl_test
 
-epochs = 10
+
 
 train_loss = []
 train_acc = []
@@ -43,8 +44,10 @@ pred_mask = model(image)
 mask = torch.squeeze(mask)
 pred_mask = pred_mask.cpu()
 
+
+
+
 num=3
-print('hi')
 plt.figure(figsize=(10, 10))
 for i in range(num):
     plt.subplot(num, 3, i*num+1)

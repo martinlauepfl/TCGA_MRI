@@ -15,6 +15,8 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 import segmentation_models_pytorch as smp
 
+from train import batchsize
+
 kaggle_3m='./kaggle_3m/'
 dirs=glob.glob(kaggle_3m+'*')
 
@@ -89,8 +91,8 @@ test_label=data_newlabel[s:]
 train_data=BrainMRIdataset(train_img,train_label,train_transformer)
 test_data=BrainMRIdataset(test_img,test_label,test_transformer)
 
-dl_train=DataLoader(train_data,batch_size=8,shuffle=True)
-dl_test=DataLoader(test_data,batch_size=8,shuffle=True)
+dl_train=DataLoader(train_data,batch_size=batchsize,shuffle=True)
+dl_test=DataLoader(test_data,batch_size=batchsize,shuffle=True)
 
 img,lable=next(iter(dl_train))
 
