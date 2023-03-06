@@ -1,3 +1,5 @@
+# transfer learning
+
 import os
 import math
 import numpy as np
@@ -68,36 +70,36 @@ def fit(epoch, model, trainloader, testloader):
     train_dice_sd = []
     test_dice_sd = []
 
-
-    model.train()
-    for x, y in tqdm(testloader):
-        x, y = x.to('cuda'), y.to('cuda')
-        y_pred = model(x)
-        loss = loss_fn(y_pred, y)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        with torch.no_grad():
-            y_pred = torch.argmax(y_pred, dim=1)
-            correct += (y_pred == y).sum().item()
-            total += y.size(0)
-            running_loss += loss.item()
-
-            intersection = torch.logical_and(y, y_pred)
-            union = torch.logical_or(y, y_pred)
-            batch_iou = torch.sum(intersection) / torch.sum(union)
-            epoch_iou.append(batch_iou.item())
-
-            y_pred_dice = y_pred
-            y_pred_dice = y_pred_dice.cpu().numpy()
-            ys = y.cpu().numpy()
-            dice = Dice(y_pred_dice, ys)
-            train_dice.append(dice)
-            dice_sd = np.std(train_dice)
-            train_dice_sd.append(dice_sd)
-
-    epoch_loss = running_loss / len(trainloader.dataset)
-    epoch_acc = correct / (total * 128 * 128)
+    # 72-100 lines, You can comment out when testing the model
+    # model.train()
+    # for x, y in tqdm(testloader):
+    #     x, y = x.to('cuda'), y.to('cuda')
+    #     y_pred = model(x)
+    #     loss = loss_fn(y_pred, y)
+    #     optimizer.zero_grad()
+    #     loss.backward()
+    #     optimizer.step()
+    #     with torch.no_grad():
+    #         y_pred = torch.argmax(y_pred, dim=1)
+    #         correct += (y_pred == y).sum().item()
+    #         total += y.size(0)
+    #         running_loss += loss.item()
+    #
+    #         intersection = torch.logical_and(y, y_pred)
+    #         union = torch.logical_or(y, y_pred)
+    #         batch_iou = torch.sum(intersection) / torch.sum(union)
+    #         epoch_iou.append(batch_iou.item())
+    #
+    #         y_pred_dice = y_pred
+    #         y_pred_dice = y_pred_dice.cpu().numpy()
+    #         ys = y.cpu().numpy()
+    #         dice = Dice(y_pred_dice, ys)
+    #         train_dice.append(dice)
+    #         dice_sd = np.std(train_dice)
+    #         train_dice_sd.append(dice_sd)
+    #
+    # epoch_loss = running_loss / len(trainloader.dataset)
+    # epoch_acc = correct / (total * 128 * 128)
 
     test_correct = 0
     test_total = 0
@@ -132,11 +134,11 @@ def fit(epoch, model, trainloader, testloader):
     epoch_test_acc = test_correct / (test_total * 128 * 128)
 
     # Log metrics to Neptune
-    run["train/loss"].log(round(epoch_loss, 3))
-    run["train/accuracy"].log(round(epoch_acc, 3))
-    run["train/iou"].log(round(np.mean(epoch_iou), 3))
-    run["train/dice"].log(round(np.mean(train_dice), 3))
-    run["train/dice_SD"].log(round(np.mean(train_dice_sd), 3))
+    # run["train/loss"].log(round(epoch_loss, 3))
+    # run["train/accuracy"].log(round(epoch_acc, 3))
+    # run["train/iou"].log(round(np.mean(epoch_iou), 3))
+    # run["train/dice"].log(round(np.mean(train_dice), 3))
+    # run["train/dice_SD"].log(round(np.mean(train_dice_sd), 3))
 
     # Log metrics to Neptune
     run["test/loss"].log(round(epoch_test_loss, 3))
@@ -154,11 +156,11 @@ def fit(epoch, model, trainloader, testloader):
     torch.save(model.state_dict(), model_path)
 
     print('epoch: ', epoch,
-          'loss： ', round(epoch_loss, 3),
-          'accuracy:', round(epoch_acc, 3),
-          'IOU:', round(np.mean(epoch_iou), 3),
-          'Dice:', round(np.mean(train_dice), 3),
-          'Dice_SD:', round(np.mean(train_dice_sd), 3),
+          # 'loss： ', round(epoch_loss, 3),
+          # 'accuracy:', round(epoch_acc, 3),
+          # 'IOU:', round(np.mean(epoch_iou), 3),
+          # 'Dice:', round(np.mean(train_dice), 3),
+          # 'Dice_SD:', round(np.mean(train_dice_sd), 3),
           'test_loss： ', round(epoch_test_loss, 3),
           'test_accuracy:', round(epoch_test_acc, 3),
           'test_iou:', round(np.mean(epoch_test_iou), 3),
@@ -167,5 +169,5 @@ def fit(epoch, model, trainloader, testloader):
 
           )
 
-    return epoch_loss, epoch_acc, epoch_test_loss, epoch_test_acc
-
+    # return epoch_loss, epoch_acc, epoch_test_loss, epoch_test_acc
+    return epoch_test_loss, epoch_test_acc

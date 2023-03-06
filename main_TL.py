@@ -16,23 +16,15 @@ from torchvision import transforms
 import segmentation_models_pytorch as smp
 
 
-from train import fit, model, epochs
+from load_model_TL import fit, model, epochs
 from data import dl_train, dl_test
 
 
-
-train_loss = []
-train_acc = []
 test_loss = []
 test_acc = []
 
 for epoch in range(epochs):
-    epoch_loss, epoch_acc, epoch_test_loss, epoch_test_acc = fit(epoch,
-                                                                 model,
-                                                                 dl_train,
-                                                                 dl_test)
-    train_loss.append(epoch_loss)
-    train_acc.append(epoch_acc)
+    epoch_test_loss, epoch_test_acc = fit(epoch,model,dl_train,dl_test)
     test_loss.append(epoch_test_loss)
     test_acc.append(epoch_test_acc)
 
