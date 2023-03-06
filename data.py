@@ -94,5 +94,5 @@ test_data=BrainMRIdataset(test_img,test_label,test_transformer)
 dl_train=DataLoader(train_data,batch_size=batchsize,shuffle=True)
 dl_test=DataLoader(test_data,batch_size=batchsize,shuffle=True)
 
-img,lable=next(iter(dl_train))
+
 

@@ -16,17 +16,15 @@ from torchvision import transforms
 import segmentation_models_pytorch as smp
 import neptune
 
-
-
 epochs = 10
 batchsize = 8
 learningrate = 0.001
 
 model = smp.Unet(
-    encoder_name="resnet34",        # choose encoder, e.g. mobilenet_v2 or efficientnet-b7
-    #encoder_weights="imagenet",     # use `imagenet` pre-trained weights for encoder initialization
-    in_channels=3,                  # model input channels (1 for gray-scale images, 3 for RGB, etc.)
-    classes=2,                      # model output channels (number of classes in your dataset)
+    encoder_name="resnet34",  # choose encoder, e.g. mobilenet_v2 or efficientnet-b7
+    # encoder_weights="imagenet",     # use `imagenet` pre-trained weights for encoder initialization
+    in_channels=3,  # model input channels (1 for gray-scale images, 3 for RGB, etc.)
+    classes=2,  # model output channels (number of classes in your dataset)
 )
 
 run = neptune.init_run(
@@ -34,29 +32,37 @@ run = neptune.init_run(
     api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI4YjA0NDIxMy02MTMwLTQwN2QtYTcxNy0wMDA0MWEwOGYwYTUifQ==",
 )  # your credentials
 
-
 run["parameters"] = {
     "batch_size": batchsize,
     "learning_rate": learningrate,
     "num_epochs": epochs
 }
 
-# img,label=next(iter(dl_train))
-# pred=model(img)
 model.to('cuda')
 
-loss_fn=nn.CrossEntropyLoss()
+loss_fn = nn.CrossEntropyLoss()
 
-optimizer=torch.optim.Adam(model.parameters(),lr=learningrate)
+optimizer = torch.optim.Adam(model.parameters(), lr=learningrate)
+
+
+def Dice(inp, target, eps=1):
+    input_flatten = inp.flatten()
+    target_flatten = target.flatten()
+    overlap = np.sum(input_flatten * target_flatten)
+    return np.clip(((2. * overlap) / (np.sum(target_flatten) + np.sum(input_flatten) + eps)), 1e-4, 0.9999)
 
 from tqdm import tqdm
-
 
 def fit(epoch, model, trainloader, testloader):
     correct = 0
     total = 0
     running_loss = 0
     epoch_iou = []
+
+    train_dice = []
+    test_dice = []
+    train_dice_sd = []
+    test_dice_sd = []
 
     model.train()
     for x, y in tqdm(testloader):
@@ -76,6 +82,14 @@ def fit(epoch, model, trainloader, testloader):
             union = torch.logical_or(y, y_pred)
             batch_iou = torch.sum(intersection) / torch.sum(union)
             epoch_iou.append(batch_iou.item())
+
+            y_pred_dice = y_pred
+            y_pred_dice = y_pred_dice.cpu().numpy()
+            ys = y.cpu().numpy()
+            dice = Dice(y_pred_dice, ys)
+            train_dice.append(dice)
+            dice_sd = np.std(train_dice)
+            train_dice_sd.append(dice_sd)
 
     epoch_loss = running_loss / len(trainloader.dataset)
     epoch_acc = correct / (total * 128 * 128)
@@ -101,6 +115,14 @@ def fit(epoch, model, trainloader, testloader):
             batch_iou = torch.sum(intersection) / torch.sum(union)
             epoch_test_iou.append(batch_iou.item())
 
+            y_pred_dice = y_pred
+            y_pred_dice = y_pred_dice.cpu().numpy()
+            ys = y.cpu().numpy()
+            dice = Dice(y_pred_dice, ys)
+            test_dice.append(dice)
+            dice_sd = np.std(test_dice)
+            test_dice_sd.append(dice_sd)
+
     epoch_test_loss = test_running_loss / len(testloader.dataset)
     epoch_test_acc = test_correct / (test_total * 128 * 128)
 
@@ -108,12 +130,15 @@ def fit(epoch, model, trainloader, testloader):
     run["train/loss"].log(round(epoch_loss, 3))
     run["train/accuracy"].log(round(epoch_acc, 3))
     run["train/iou"].log(round(np.mean(epoch_iou), 3))
-
+    run["train/dice"].log(round(np.mean(train_dice), 3))
+    run["train/dice_SD"].log(round(np.mean(train_dice_sd), 3))
 
     # Log metrics to Neptune
     run["test/loss"].log(round(epoch_test_loss, 3))
     run["test/accuracy"].log(round(epoch_test_acc, 3))
     run["test/iou"].log(round(np.mean(epoch_test_iou), 3))
+    run["test/dice"].log(round(np.mean(test_dice), 3))
+    run["test/dice_SD"].log(round(np.mean(test_dice_sd), 3))
 
     # Log epoch number
     run["epoch"].log(epoch)
@@ -122,10 +147,14 @@ def fit(epoch, model, trainloader, testloader):
           'loss： ', round(epoch_loss, 3),
           'accuracy:', round(epoch_acc, 3),
           'IOU:', round(np.mean(epoch_iou), 3),
+          'Dice:', round(np.mean(train_dice), 3),
+          'Dice_SD:', round(np.mean(train_dice_sd), 3),
           'test_loss： ', round(epoch_test_loss, 3),
           'test_accuracy:', round(epoch_test_acc, 3),
-          'test_iou:', round(np.mean(epoch_test_iou), 3)
+          'test_iou:', round(np.mean(epoch_test_iou), 3),
+          'testDice:', round(np.mean(test_dice), 3),
+          'testDice_SD:', round(np.mean(test_dice_sd), 3)
+
           )
 
     return epoch_loss, epoch_acc, epoch_test_loss, epoch_test_acc
-

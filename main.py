@@ -44,9 +44,6 @@ pred_mask = model(image)
 mask = torch.squeeze(mask)
 pred_mask = pred_mask.cpu()
 
-
-
-
 num=3
 plt.figure(figsize=(10, 10))
 for i in range(num):
